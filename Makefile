@@ -1,0 +1,2 @@
+serve:
+	hupper -m app
