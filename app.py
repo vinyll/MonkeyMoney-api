@@ -21,11 +21,13 @@ async def index(request, response):
 
 @app.route('/login', methods=['POST'])
 async def login(request, response):
-    import ipdb; ipdb.set_trace()
     email = request.json.get('email')
     password = request.json.get('password')
     user = models.get_user(email, password)
-    response.body = json.dumps(user)
+    if user:
+        response.body = json.dumps(user)
+    else:
+        raise HttpError(401, "Please check your email and password")
 
 
 @app.route('/signup', methods=['POST'])
