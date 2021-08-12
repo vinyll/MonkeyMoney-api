@@ -3,12 +3,15 @@ from datetime import datetime
 from dataclasses import dataclass
 
 import redis
-from redisgraph import Node, Edge, Graph, Path
+from redisgraph import Node, Edge, Graph
 from uuid import uuid4
 
 
+class DuplicateError(Exception):
+    pass
+
 @dataclass
-class Path(dict):
+class GraphPath(dict):
     origin: dict
     edge: dict
     destination: dict
@@ -22,11 +25,11 @@ class RGraph:
         r = redis.Redis(host=host, port=port)
         self.db = Graph(database, r)
 
-    def get_user_by_uid(self, uid: str) -> dict:
-        uid = clean_str(uid)
+    def get_user_by(self, key: str, value: str) -> dict:
+        value = clean_str(value)
         result = self.db.query(f"""
           MATCH (u:User)
-            WHERE u.uid = "{uid}"
+            WHERE u.{key} = "{value}"
           RETURN u
         """)
         if result.result_set:
@@ -42,10 +45,21 @@ class RGraph:
       if result.result_set:
         return result.result_set[0][0].properties
 
+    def update_user_credit(self, uid: str, credit: int) -> dict:
+      result = self.db.query(f"""
+        MATCH (u:User)
+          WHERE u.uid = "{uid}"
+        SET u.credit = {credit}
+        RETURN u
+      """)
+      if result.result_set:
+        return result.result_set[0][0].properties
+
+
     def create_user(self, email: str, password: str, credit: int=0) -> dict:
       email = clean_str(email)
-      if self.get_user(email, password):
-        raise Exception(f"A user with email '{email}' already exists.")
+      if self.get_user_by('email', email):
+        raise DuplicateError(f"A user with email '{email}' already exists.")
 
       uid = str(uuid4())
       now = int(datetime.now().timestamp())
@@ -58,7 +72,7 @@ class RGraph:
         'credit': credit,
       }))
       self.db.flush()
-      return self.get_user_by_uid(uid)
+      return self.get_user_by('uid', uid)
 
     def deposit(self, src_uid: str, amount: int) -> dict:
       now = int(datetime.now().timestamp())
@@ -74,7 +88,7 @@ class RGraph:
       if result.result_set:
         return result.result_set[0][0].properties
 
-    def get_transaction(self, uid: str) -> Path:
+    def get_transaction(self, uid: str) -> GraphPath:
       result = self.db.query(f"""
         MATCH (src:User)-[t:Transaction]->(dest)
           WHERE t.uid = "{uid}"
@@ -87,7 +101,7 @@ class RGraph:
           "destination": result.result_set[0][2].properties,
         }
 
-    def get_transaction_by_code(self, code: str) -> Path:
+    def get_transaction_by_code(self, code: str) -> GraphPath:
       result = self.db.query(f"""
         MATCH (src:User)-[t:Transaction]->(dest)
           WHERE t.uid CONTAINS "-{code}-"
@@ -100,9 +114,9 @@ class RGraph:
           "destination": result.result_set[0][2].properties,
         }
 
-    def withdraw(self, transaction_code: str, dest_uid: str) -> dict:
+    def withdraw(self, transaction_uid: str, dest_uid: str) -> dict:
       result = self.db.query(f"""
-        MATCH (src:User)-[t:Transaction]->(:Nobody) WHERE t.uid CONTAINS "-{transaction_code}-"
+        MATCH (src:User)-[t:Transaction]->(:Nobody) WHERE t.uid = "{transaction_uid}"
         MATCH (dest:User) WHERE dest.uid = "{dest_uid}"
         WITH src, t, dest, {{ amount: t.amount, datetime: t.datetime, uid: t.uid }} AS props
           CREATE (src)-[t_new:Transaction]->(dest)
@@ -110,15 +124,16 @@ class RGraph:
           SET t_new = props
         RETURN src, t_new, dest
       """)
-      return {
+
+      path = {
         "origin": result.result_set[0][0].properties,
         "edge": result.result_set[0][1].properties,
         "destination": result.result_set[0][2].properties,
       }
+      return path
 
     def destroy(self, *args) -> None:
-      if not args or args[0] != "I know what I'm doing":
+      if not args or args[0] != f"I am deleting all data in {self.db.name}":
         raise Exception("Are you aware you are destroying all data?")
-      self.db.query("""
-        MATCH (a) DELETE a
-      """)
+      query = """MATCH (a) DELETE a"""
+      self.db.query(query)
