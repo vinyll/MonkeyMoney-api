@@ -1,2 +1,5 @@
 serve:
-	hupper -m app
+	hupper -m app -w .
+
+test_serve:
+	DB_NAME=monkeymoney_test make serve

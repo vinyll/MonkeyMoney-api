@@ -45,7 +45,8 @@ class ModelsTest(TestCase):
     def test_withdraw(self):
         recipient = db.create_user('igot@paid', 'pa1d')
         deposit = db.deposit(self.user['uid'], 13)
-        db.withdraw(deposit['uid'], recipient['uid'])
+        withdrawal = db.withdraw(deposit['uid'], recipient['uid'])
+        self.assertEqual(withdrawal['edge']['uid'], deposit['uid'])
         transaction = db.get_transaction(deposit['uid'])
         self.assertEqual(transaction['origin']['uid'], self.user['uid'])
         self.assertEqual(transaction['destination']['uid'], recipient['uid'])
