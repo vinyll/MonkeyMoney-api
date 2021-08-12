@@ -34,13 +34,19 @@ def init(app, db):
 
     @app.route('/deposit', methods=['POST'])
     async def post_deposit(request, response):
-        sender_id = request.headers.get('AUTH')
-        if not sender_id:
+        # Auth
+        sender_uid = request.headers.get('AUTH')
+        if not sender_uid:
             raise HttpError(401, 'You must be authenticated')
+        # Amount range
         amount = int(request.json.get('amount'))
         if not 0 < amount <= 1000:
             raise Exception(f'Amount must be between 1 and 1000. It is {amount}.')
-        transaction = db.deposit(sender_id, amount)
+        # Sender credit
+        user = db.get_user_by('uid', sender_uid)
+        if amount > user['credit']:
+            raise HttpError(401, "You don't have enough credit")
+        transaction = db.deposit(sender_uid, amount)
         response.body = json.dumps(transaction)
 
     @app.route('/deposit', methods=['DELETE'])
@@ -65,10 +71,10 @@ def init(app, db):
             raise HttpError(400, f'No transaction match {code}')
         # Transaction must not be assigned
         if trans['destination']:
-            raise HttpError(400, "The transaction is not valid")
+            raise HttpError(401, "The transaction is not valid")
         # Enough credit
         if trans['edge']['amount'] > trans['origin']['credit']:
-            raise HttpError(400, "The amount exceeds the sender's credit")
+            raise HttpError(401, "The amount exceeds the sender's credit")
         # Assign transaction to user
         withdrawal = db.withdraw(trans['edge']['uid'], recipient_uid)
         # Credit out giver

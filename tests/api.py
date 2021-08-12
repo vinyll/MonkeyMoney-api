@@ -66,13 +66,20 @@ class ApiTest(TestCase):
 
     def test_deposit(self):
         response = requests.post(url('/deposit'), data=json.dumps({
-            'amount': 20,
+            'amount': 8,
         }), headers={'AUTH': self.user['uid']})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['uid']), 36)
         user = db.get_user_by('uid', self.user['uid'])
         self.assertEqual(user['credit'], 10)
 
+    def test_deposit_insuficient_credit(self):
+        response = requests.post(url('/deposit'), data=json.dumps({
+            'amount': 20,
+        }), headers={'AUTH': self.user['uid']})
+        self.assertEqual(response.status_code, 401)
+        user = db.get_user_by('uid', self.user['uid'])
+        self.assertEqual(user['credit'], 10)
 
     def test_withdrawal(self):
         deposit = db.deposit(self.user['uid'], 8)
@@ -88,3 +95,35 @@ class ApiTest(TestCase):
         friend = db.get_user_by('uid', buddy['uid'])
         self.assertEqual(me['credit'], 2)
         self.assertEqual(friend['credit'], 28)
+
+
+    def test_withdrawal_insuficent_credit(self):
+        deposit = db.deposit(self.user['uid'], 8)
+        buddy = db.create_user('buddy@local', 'bu99y', 20)
+        response = requests.post(url('/withdraw'), data=json.dumps({
+            'code': deposit['uid'].split('-')[1],
+        }), headers={'AUTH': buddy['uid']})
+        self.assertEqual(response.status_code, 200)
+        withdrawal = response.json()
+        self.assertEqual(withdrawal['edge']['uid'], deposit['uid'])
+        self.assertEqual(withdrawal['edge']['amount'], 8)
+        me = db.get_user_by('uid', self.user['uid'])
+        friend = db.get_user_by('uid', buddy['uid'])
+        self.assertEqual(me['credit'], 10 - 8)
+        self.assertEqual(friend['credit'], 20 + 8)
+
+    def test_withdrawal_multiple(self):
+        deposit = db.deposit(self.user['uid'], 7)
+        deposit2 = db.deposit(self.user['uid'], 9)
+        buddy = db.create_user('buddy@local', 'bu99y', 0)
+        requests.post(url('/withdraw'), data=json.dumps({
+            'code': deposit['uid'].split('-')[1],
+        }), headers={'AUTH': buddy['uid']})
+        response = requests.post(url('/withdraw'), data=json.dumps({
+            'code': deposit2['uid'].split('-')[1],
+        }), headers={'AUTH': buddy['uid']})
+        self.assertEqual(response.status_code, 401, "Not enough credit for 2nd withdrawal")
+        me = db.get_user_by('uid', self.user['uid'])
+        friend = db.get_user_by('uid', buddy['uid'])
+        self.assertEqual(me['credit'], 10 - 7)
+        self.assertEqual(friend['credit'], 7)
