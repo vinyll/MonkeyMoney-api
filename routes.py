@@ -43,6 +43,7 @@ def init(app, db):
         if not user:
             raise HttpError(404)
         del user['password']
+        user['transactions'] = db.get_user_transactions(user['uid'])
         response.body = json.dumps(user)
 
     @app.route('/deposit', methods=['POST'])

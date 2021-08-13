@@ -35,6 +35,48 @@ class RGraph:
         if result.result_set:
             return result.result_set[0][0].properties
 
+    def get_user_deposits(self, uid: str) -> list:
+      result = self.db.query(f"""
+        MATCH (u:User)-[t:Transaction]->(d:User)
+          WHERE u.uid = "{uid}"
+        RETURN *
+        ORDER BY t.date DESCENDING
+      """)
+      if result.result_set:
+        return [{
+          'origin': row[0].properties,
+          'edge': row[1].properties,
+          'dest': row[2].properties
+          }
+          for row in result.result_set
+        ]
+
+    def get_user_withdrawals(self, uid: str) -> list:
+      result = self.db.query(f"""
+        MATCH (o:User)-[t:Transaction]->(u:User)
+          WHERE u.uid = "{uid}"
+        RETURN *
+        ORDER BY t.date DESCENDING
+      """)
+      if result.result_set:
+        return [{
+          'origin': row[0].properties,
+          'edge': row[1].properties,
+          'dest': row[2].properties
+          }
+          for row in result.result_set
+        ]
+
+    def get_user_transactions(self, uid: str) -> list:
+      transactions = []
+      for deposit in self.get_user_deposits(uid):
+        deposit['type'] = 'deposit'
+        transactions.append(deposit)
+      for withdrawal in self.get_user_withdrawals(uid):
+        withdrawal['type'] = 'withdrawal'
+        transactions.append(withdrawal)
+      return sorted(transactions, key = lambda x: x['edge']['datetime'], reverse=True)
+
     def get_user(self, email: str, password: str) -> dict:
       email = clean_str(email)
       result = self.db.query(f"""

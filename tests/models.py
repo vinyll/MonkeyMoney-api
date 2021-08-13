@@ -9,8 +9,8 @@ db = RGraph(database="monkeymoney_test")
 
 class ModelsTest(TestCase):
     def setUp(self):
-        db.create_user('test@localhost', 'p4ssw0rd')
-        self.user = db.get_user('test@localhost', 'p4ssw0rd')
+        self.user = db.create_user('test@localhost', 'p4ssw0rd')
+        self.friend = db.create_user('buddy@localhost', 'b499y', 40)
 
     def tearDown(self):
         db.destroy("I am deleting all data in monkeymoney_test")
@@ -56,3 +56,21 @@ class ModelsTest(TestCase):
         self.assertEqual(transaction['origin']['uid'], self.user['uid'])
         self.assertEqual(transaction['destination']['uid'], recipient['uid'])
         self.assertEqual(transaction['edge']['amount'], 13)
+
+
+    def test_get_user_transactions(self):
+        deposits = [
+            db.deposit(self.friend['uid'], 20),
+            db.deposit(self.user['uid'], 8),
+            db.deposit(self.user['uid'], 5),
+        ]
+        withdrawals = [
+            db.withdraw(deposits[0]['uid'], self.user['uid']),
+            db.withdraw(deposits[1]['uid'], self.friend['uid']),
+            db.withdraw(deposits[2]['uid'], self.friend['uid']),
+        ]
+        transactions = db.get_user_transactions(self.user['uid'])
+        self.assertEqual(len(transactions), 3)
+        self.assertEqual(transactions[2]['origin']['uid'], self.friend['uid'])
+        self.assertEqual(transactions[2]['dest']['uid'], self.user['uid'])
+        self.assertEqual(transactions[2]['edge']['amount'], 20)
