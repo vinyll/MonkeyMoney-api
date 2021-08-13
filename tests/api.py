@@ -64,6 +64,14 @@ class ApiTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['uid']), 36)
 
+    def test_me(self):
+        response = requests.get(url('/me'), headers={'AUTH': self.user['uid']})
+        self.assertEqual(response.status_code, 200)
+        user = response.json()
+        self.assertNotIn('password', user.keys())
+        self.assertEqual(user['uid'], self.user['uid'])
+        self.assertEqual(user['email'], self.user['email'])
+
     def test_deposit(self):
         response = requests.post(url('/deposit'), data=json.dumps({
             'amount': 8,

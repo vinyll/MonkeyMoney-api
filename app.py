@@ -8,7 +8,7 @@ import routes
 
 app = Roll()
 cors(app, origin="*", methods="*")
-db = RGraph(database=env.get("DB_NAME"))
+db = RGraph(database=env.get("DB_NAME", "monkeymoney"))
 routes.init(app, db)
 
 

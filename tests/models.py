@@ -21,6 +21,11 @@ class ModelsTest(TestCase):
         self.assertEqual(len(self.user['uid']), 36)
         self.assertEqual(self.user['credit'], 0)
 
+    def test_get_user_by(self):
+        self.assertEqual(db.get_user_by('email', 'non@existing'), None)
+        self.assertDictEqual(db.get_user_by('email', 'test@localhost'), self.user)
+        self.assertDictEqual(db.get_user_by('uid', self.user['uid']), self.user)
+
     def test_update_user_credit(self):
         self.assertEqual(self.user['credit'], 0)
         db.update_user_credit(self.user['uid'], 3)

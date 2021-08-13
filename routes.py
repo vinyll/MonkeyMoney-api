@@ -20,9 +20,10 @@ def init(app, db):
         email = request.json.get('email')
         password = request.json.get('password')
         try:
-            user = db.create_user(email, password)
+            user = db.create_.user(email, password)
         except DuplicateError as e:
             raise HttpError(400, str(e))
+        response.status = 200
         response.body = json.dumps(user)
 
     @app.route('/profile/<uid>')
@@ -30,6 +31,18 @@ def init(app, db):
         user = db.get_user_by('uid', uid)
         if not user:
             raise HttpError(404)
+        response.body = json.dumps(user)
+
+    @app.route('/me')
+    async def get_me(request, response):
+        # Auth
+        sender_uid = request.headers.get('AUTH')
+        if not sender_uid:
+            raise HttpError(401, 'You must be authenticated')
+        user = db.get_user_by('uid', sender_uid)
+        if not user:
+            raise HttpError(404)
+        del user['password']
         response.body = json.dumps(user)
 
     @app.route('/deposit', methods=['POST'])
