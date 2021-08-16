@@ -3,7 +3,7 @@ Description=MonkeyMoney API
 After=network.target
 
 [Service]
-ExecStart=/home/ubuntu/monkeymoney/api/venv/bin/gunicorn --timeout=60 -w=3 --worker-class='roll.worker.Worker' --bind='unix:/tmp/monkeymoney-api.sock' core.wsgi:application
+ExecStart=/home/ubuntu/monkeymoney/api/venv/bin/gunicorn --timeout=60 -w=3 --worker-class='roll.worker.Worker' --bind='unix:/tmp/monkeymoney-api.sock' app:app
 WorkingDirectory=/home/ubuntu/monkeymoney/api
 Restart=always
 RestartSec=3
