@@ -20,7 +20,7 @@ def init(app, db):
         email = request.json.get('email')
         password = request.json.get('password')
         try:
-            user = db.create_.user(email, password)
+            user = db.create_user(email, password)
         except DuplicateError as e:
             raise HttpError(400, str(e))
         response.status = 200
