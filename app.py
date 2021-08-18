@@ -7,7 +7,7 @@ import routes
 
 
 app = Roll()
-cors(app, origin="*", methods="*")
+cors(app, origin="*", methods="*", headers=["*", "Auth"])
 db = RGraph(database=env.get("DB_NAME", "monkeymoney"))
 routes.init(app, db)
 

@@ -5,6 +5,9 @@ from models import DuplicateError
 
 
 def init(app, db):
+    @app.route('/{path:.+}', methods=['OPTIONS'])
+    async def preflight(request, response, path):
+        response.body = ""
 
     @app.route('/login', methods=['POST'])
     async def login(request, response):
