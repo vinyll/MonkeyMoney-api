@@ -1,13 +1,16 @@
 import json
 
 from roll import HttpError
+from roll.extensions import options, logger
+
 from models import DuplicateError
 
 
 def init(app, db):
-    @app.route('/{path:.+}', methods=['OPTIONS'])
-    async def preflight(request, response, path):
-        response.body = ""
+
+    # Preflight requests
+    options(app)
+
 
     @app.route('/login', methods=['POST'])
     async def login(request, response):
