@@ -19,6 +19,7 @@ def init(app, db):
         user = db.get_user(email, password)
         if not user:
             raise HttpError(403, "Please check your email and password")
+        response.headers['Content-Type'] = 'application/json'
         response.body = json.dumps(user)
 
     @app.route('/signup', methods=['POST'])
@@ -30,6 +31,7 @@ def init(app, db):
         except DuplicateError as e:
             raise HttpError(400, str(e))
         response.status = 200
+        response.headers['Content-Type'] = 'application/json'
         response.body = json.dumps(user)
 
     @app.route('/profile/<uid>')
@@ -37,6 +39,7 @@ def init(app, db):
         user = db.get_user_by('uid', uid)
         if not user:
             raise HttpError(404)
+        response.headers['Content-Type'] = 'application/json'
         response.body = json.dumps(user)
 
     @app.route('/me')
@@ -50,6 +53,7 @@ def init(app, db):
             raise HttpError(404)
         del user['password']
         user['transactions'] = db.get_user_transactions(user['uid'])
+        response.headers['Content-Type'] = 'application/json'
         response.body = json.dumps(user)
 
     @app.route('/deposit', methods=['POST'])
@@ -67,6 +71,7 @@ def init(app, db):
         if amount > user['credit']:
             raise HttpError(401, "You don't have enough credit")
         transaction = db.deposit(sender_uid, amount)
+        response.headers['Content-Type'] = 'application/json'
         response.body = json.dumps(transaction)
 
     @app.route('/deposit', methods=['DELETE'])
@@ -76,6 +81,7 @@ def init(app, db):
             raise HttpError(401, 'You must be authenticated')
         uid = int(request.json.get('uid'))
         transaction = db.get_transaction(uid)
+        response.headers['Content-Type'] = 'application/json'
         response.body = json.dumps(transaction)
 
     @app.route('/withdraw', methods=['POST'])
@@ -100,4 +106,5 @@ def init(app, db):
         # Credit out giver
         db.update_user_credit(withdrawal['origin']['uid'], withdrawal['origin']['credit'] - withdrawal['edge']['amount'])
         db.update_user_credit(withdrawal['destination']['uid'], withdrawal['destination']['credit'] + withdrawal['edge']['amount'])
+        response.headers['Content-Type'] = 'application/json'
         response.body = json.dumps(withdrawal)
