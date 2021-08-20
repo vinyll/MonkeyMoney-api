@@ -72,22 +72,14 @@ class ApiTest(TestCase):
         self.assertEqual(user['uid'], self.user['uid'])
         self.assertEqual(user['email'], self.user['email'])
 
-    def test_deposit(self):
-        response = requests.post(url('/deposit'), data=json.dumps({
-            'amount': 8,
-        }), headers={'AUTH': self.user['uid']})
+    def test_transaction(self):
+        deposit = db.deposit(self.user['uid'], 11)
+        code = deposit['uid'].split('-')[1]
+        response = requests.get(url(f'/transaction/{code}'), headers={'AUTH': self.user['uid']})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['uid']), 36)
-        user = db.get_user_by('uid', self.user['uid'])
-        self.assertEqual(user['credit'], 10)
-
-    def test_deposit_insuficient_credit(self):
-        response = requests.post(url('/deposit'), data=json.dumps({
-            'amount': 20,
-        }), headers={'AUTH': self.user['uid']})
-        self.assertEqual(response.status_code, 401)
-        user = db.get_user_by('uid', self.user['uid'])
-        self.assertEqual(user['credit'], 10)
+        transaction = response.json()
+        self.assertEqual(transaction['edge']['uid'], deposit['uid'])
+        self.assertEqual(transaction['edge']['amount'], deposit['amount'])
 
     def test_withdrawal(self):
         deposit = db.deposit(self.user['uid'], 8)

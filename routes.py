@@ -6,6 +6,22 @@ from roll.extensions import options, logger
 from models import DuplicateError
 
 
+def auth_required(*args, **kwargs):
+    view = args[0]
+
+    def wrapper(*args, **kwargs):
+        request = args[0]
+        if not hasattr(request, "headers"):  # method view.
+            request = args[1]
+        token = request.headers.get("AUTH")
+        if not token:
+            logger.debug("No token provided on request for %s", request.url)
+            raise HttpError(401, "No authentication token was provided.")
+        return view(*args, **kwargs)
+
+    return wrapper
+
+
 def init(app, db):
 
     # Preflight requests
@@ -71,6 +87,12 @@ def init(app, db):
         if amount > user['credit']:
             raise HttpError(401, "You don't have enough credit")
         transaction = db.deposit(sender_uid, amount)
+        response.headers['Content-Type'] = 'application/json'
+        response.body = json.dumps(transaction)
+
+    @app.route('/transaction/{code}')
+    async def get_transaction(request, response, code):
+        transaction: db.GraphPath = db.get_transaction_by_code(code)
         response.headers['Content-Type'] = 'application/json'
         response.body = json.dumps(transaction)
 
