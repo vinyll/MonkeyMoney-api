@@ -16,7 +16,7 @@ class GraphPath(dict):
     edge: dict
     destination: dict
 
-def clean_str(string: str) -> str:
+def clean_str(string: str = "") -> str:
     return string.strip().lower()
 
 
@@ -69,10 +69,12 @@ class RGraph:
 
     def get_user_transactions(self, uid: str) -> list:
       transactions = []
-      for deposit in self.get_user_deposits(uid):
+      deposits = self.get_user_deposits(uid) or []
+      for deposit in deposits:
         deposit['type'] = 'deposit'
         transactions.append(deposit)
-      for withdrawal in self.get_user_withdrawals(uid):
+      withdrawals = self.get_user_withdrawals(uid) or []
+      for withdrawal in withdrawals:
         withdrawal['type'] = 'withdrawal'
         transactions.append(withdrawal)
       return sorted(transactions, key = lambda x: x['edge']['datetime'], reverse=True)

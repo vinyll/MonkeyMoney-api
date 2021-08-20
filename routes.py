@@ -50,7 +50,7 @@ def init(app, db):
             raise HttpError(401, 'You must be authenticated')
         user = db.get_user_by('uid', sender_uid)
         if not user:
-            raise HttpError(404)
+            raise HttpError(401)
         del user['password']
         user['transactions'] = db.get_user_transactions(user['uid'])
         response.headers['Content-Type'] = 'application/json'
